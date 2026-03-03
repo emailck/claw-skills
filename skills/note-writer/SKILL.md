@@ -11,6 +11,7 @@ description: Create quick notes and daily journal entries in an Obsidian vault o
 - Daily notes: `D:\Notes\daily\YYYY-MM-DD.md`
 - Notes folder: `D:\Notes\inbox\`
 - Topics folder: `D:\Notes\topics\`
+- Weekly reports: `D:\Notes\topics\周报\YYYY-Www-周X.md`
 - Keyword line goes directly under the title:
   - `关键词：#...` (exactly 7 tags)
 
@@ -60,7 +61,24 @@ description: Create quick notes and daily journal entries in an Obsidian vault o
 - ...正文...
 ```
 
+### Weekly report (周报)
+
+```
+# 工作周报｜YYYY年第WW周｜周X
+关键词：#周报 #第WW周 #tag3 #tag4 #tag5 #tag6 #tag7
+
+- ...
+```
+
 ## Writing to disk
 
 - Always write as UTF-8.
+- Prefer UTF-8 without BOM on Windows (reduces mojibake across tools).
 - If `D:\Notes` does not exist, create needed directories.
+
+## Scripts
+
+- Create a note file deterministically: `scripts/new_note.py`
+- Write file with UTF-8 (no BOM): `scripts/write_note.ps1`
+- Search notes by keywords/tags: `scripts/search_notes.ps1`
+- Fix mojibake filenames (rename using first `# Title`): `scripts/rename_from_title.py`
