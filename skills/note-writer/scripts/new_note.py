@@ -95,10 +95,18 @@ def main() -> int:
     ap.add_argument("--vault", default=r"D:\\Notes")
     ap.add_argument("--type", choices=["daily", "copywriting", "inbox"], default="inbox")
     ap.add_argument("--title", required=True)
-    ap.add_argument("--body", required=True)
+    ap.add_argument("--body")
+    ap.add_argument("--body-file", help="Read body from a UTF-8 file (recommended on Windows).")
     ap.add_argument("--write", action="store_true")
 
     args = ap.parse_args()
+
+    if not args.body and not args.body_file:
+        ap.error("the following arguments are required: --body (or --body-file)")
+
+    body = args.body or ""
+    if args.body_file:
+        body = Path(args.body_file).read_text(encoding="utf-8", errors="strict")
 
     now = dt.datetime.now()
     date = now.strftime("%Y-%m-%d")
@@ -117,8 +125,8 @@ def main() -> int:
     else:
         rel = Path("inbox") / fname
 
-    tags = pick_tags(args.body + "\n" + args.title, args.type)
-    content = build_content(args.title, args.body, tags)
+    tags = pick_tags(body + "\n" + args.title, args.type)
+    content = build_content(args.title, body, tags)
     path = vault / rel
 
     if args.write:
@@ -146,8 +154,6 @@ def main() -> int:
                 pass
 
     print_utf8(str(path))
-    print_utf8("---")
-    print_utf8(content)
     return 0
 
 
