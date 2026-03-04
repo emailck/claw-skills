@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from io_utils import print_utf8
+
 INVALID_FILENAME_CHARS = r'<>:"/\\|?*'
 
 
@@ -53,7 +55,7 @@ def main() -> int:
         f.rename(target)
         renamed += 1
 
-    print(f"renamed_files={renamed}")
+    print_utf8(f"renamed_files={renamed}")
     return 0
 
 

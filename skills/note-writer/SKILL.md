@@ -72,19 +72,30 @@ description: Create quick notes and daily journal entries in an Obsidian vault o
 
 ## Writing to disk
 
-This skill writes files by running the PowerShell script `scripts/write_note.ps1`.
+This skill writes files by running the Python script `scripts/write_note.py`.
 
 - It writes directly to paths like `D:\Notes\...` (not via the agent's generic `write` tool).
 - It always writes UTF-8 (no BOM) to avoid mojibake across tools.
 - It creates parent directories automatically if they don't exist.
+- For multi-line Chinese content on Windows, prefer `--content-file` (do not pipe via stdin).
 
 ### Why this matters (common pitfall)
 
-Some environments/tooling may restrict the agent-level `write` tool to the workspace root for safety. This skill bypasses that limitation by writing through a local script, so it can write to your Obsidian vault path as configured.
+Windows shells (PowerShell 5.1 / cmd) often use a GBK console encoding for stdin/stdout. Passing multi-line Chinese text through command-line args or pipes can corrupt content before Python even sees it. This skill avoids that by writing the content to a UTF-8 temp file first, then writing to the final note path.
 
 ## Scripts
 
 - Create a note file deterministically: `scripts/new_note.py`
-- Write file with UTF-8 (no BOM): `scripts/write_note.ps1`
-- Search notes by keywords/tags: `scripts/search_notes.ps1`
+- Create a weekly report: `scripts/new_weekly_report.py`
+- Write file with UTF-8 (no BOM): `scripts/write_note.py`
+- Read a note by path (UTF-8): `scripts/read_note.py`
+- Search notes by keyword: `scripts/search_notes.py`
 - Fix mojibake filenames (rename using first `# Title`): `scripts/rename_from_title.py`
+- Fix mojibake filenames in inbox: `scripts/rename_mojibake_inbox.py`
+
+## Legacy (deprecated)
+
+These are kept temporarily for compatibility but should not be used:
+- `scripts/write_note.ps1`
+- `scripts/read_note.ps1`
+- `scripts/search_notes.ps1`

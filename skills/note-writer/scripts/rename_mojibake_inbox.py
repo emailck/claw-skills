@@ -16,37 +16,33 @@ def safe_slug(title: str) -> str:
     return title or "note"
 
 
+def guess_prefix(name: str) -> str | None:
+    if re.match(r"^\d{4}-\d{2}-\d{2}-\d{4}-", name):
+        return name[:16]
+    if re.match(r"^\d{4}-\d{2}-\d{2}-", name):
+        return name[:11]
+    return None
+
+
 def main() -> int:
-    vault = Path(r"D:\Notes\topics\文案")
+    vault = Path(r"D:\Notes\inbox")
     if not vault.exists():
         return 0
 
+    renamed = 0
     for f in list(vault.glob("*.md")):
-        try:
-            text = f.read_text(encoding="utf-8-sig", errors="replace")
-        except Exception:
+        if ("�" not in f.name) and ("?" not in f.name):
             continue
 
+        text = f.read_text(encoding="utf-8-sig", errors="replace")
         m = re.search(r"^#\s*(.+)$", text, re.M)
         title = m.group(1).strip() if m else "未命名"
-
-        if "�" not in f.name and "�" not in title:
-            continue
-
         slug = safe_slug(title)
 
-        # Keep existing datetime prefix if present
-        new_name = None
-        if re.match(r"^\d{4}-\d{2}-\d{2}-\d{4}-", f.name):
-            prefix = f.name[:16]  # YYYY-MM-DD-HHMM-
-            new_name = prefix + slug + ".md"
-        elif re.match(r"^\d{4}-\d{2}-\d{2}-", f.name):
-            prefix = f.name[:11]  # YYYY-MM-DD-
-            new_name = prefix + slug + ".md"
-        else:
-            new_name = slug + ".md"
-
+        prefix = guess_prefix(f.name)
+        new_name = (prefix + slug + ".md") if prefix else (slug + ".md")
         target = vault / new_name
+
         if target.exists() and target != f:
             i = 2
             while True:
@@ -57,8 +53,9 @@ def main() -> int:
                 i += 1
 
         f.rename(target)
-        print_utf8(f"RENAMED {f.name} -> {target.name}")
+        renamed += 1
 
+    print_utf8(f"renamed_files={renamed}")
     return 0
 
 

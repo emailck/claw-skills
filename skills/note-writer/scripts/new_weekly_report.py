@@ -97,12 +97,36 @@ def main() -> int:
     )
 
     if args.write:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        # Avoid passing non-ASCII content through Windows shells (GBK console).
+        # Write content to a UTF-8 temp file, then write to the final path.
+        tmp_root = Path(__file__).resolve().parent.parent / "tmp"
+        tmp_root.mkdir(parents=True, exist_ok=True)
+        tmp_path = tmp_root / f"weekly-{year}-W{week:02d}-{weekday}.md"
+        tmp_path.write_text(content, encoding="utf-8", errors="strict")
 
-    print(str(path))
-    print("---")
-    print(content)
+        from write_note import main as write_note_main
+
+        try:
+            write_note_main(
+                [
+                    "--quiet",
+                    "--path",
+                    str(path),
+                    "--content-file",
+                    str(tmp_path),
+                ]
+            )
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    from io_utils import print_utf8
+
+    print_utf8(str(path))
+    print_utf8("---")
+    print_utf8(content)
     return 0
 
 

@@ -1,8 +1,9 @@
 import argparse
 import datetime as dt
-import os
 import re
 from pathlib import Path
+
+from io_utils import print_utf8
 
 INVALID_FILENAME_CHARS = r'<>:"/\\|?*'
 
@@ -105,25 +106,48 @@ def main() -> int:
 
     vault = Path(args.vault)
 
+    safe = slugify(args.title)
+    # Prefix with a stable ASCII slug to avoid mojibake in some terminals/tools.
+    fname = f"{date}-{hhmm}-{safe}.md"
+
     if args.type == "daily":
         rel = Path("daily") / f"{date}.md"
     elif args.type == "copywriting":
-        rel = Path("topics") / "文案" / f"{date}-{hhmm}-{slugify(args.title)}.md"
+        rel = Path("topics") / "文案" / fname
     else:
-        rel = Path("inbox") / f"{date}-{hhmm}-{slugify(args.title)}.md"
+        rel = Path("inbox") / fname
 
     tags = pick_tags(args.body + "\n" + args.title, args.type)
     content = build_content(args.title, args.body, tags)
     path = vault / rel
 
     if args.write:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # UTF-8 (no BOM)
-        path.write_text(content, encoding="utf-8", errors="strict")
+        tmp_root = Path(__file__).resolve().parent.parent / "tmp"
+        tmp_root.mkdir(parents=True, exist_ok=True)
+        tmp_path = tmp_root / fname
+        tmp_path.write_text(content, encoding="utf-8", errors="strict")
 
-    print(str(path))
-    print("---")
-    print(content)
+        from write_note import main as write_note_main
+
+        try:
+            write_note_main(
+                [
+                    "--quiet",
+                    "--path",
+                    str(path),
+                    "--content-file",
+                    str(tmp_path),
+                ]
+            )
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    print_utf8(str(path))
+    print_utf8("---")
+    print_utf8(content)
     return 0
 
 
