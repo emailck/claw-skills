@@ -27,6 +27,16 @@ description: Create quick notes and daily journal entries in an Obsidian vault o
    - A cleaned, readable note (keep the user's tone)
 5. If asked to "directly write": save the file to disk using UTF-8.
 
+## Weekly summary (from 周报)
+
+This skill can also summarize a work week by reading existing weekly reports under:
+- `D:\Notes\topics\周报\YYYY-Www-周X.md`
+
+Typical usage:
+- Gather all `YYYY-Www-*.md` files for the target ISO week.
+- Extract bullet items and group them by topic (e.g. 软卡 / 密管 / 客户支持).
+- Output a concise summary (and optionally write it back as a new weekly note).
+
 ## Tagging rules (exactly 7)
 
 - Prefer nouns / concrete searchable terms.
