@@ -42,11 +42,13 @@ python -c "import json, pathlib, subprocess; p=pathlib.Path(r'C:\\Users\\<you>\\
 
 ## Workflow
 
-### Step 1) Attach a clean Chrome tab
+### Step 1) Attach a clean Chrome tab (start a new chat each run)
 
 - Open `https://www.doubao.com/chat/` in Chrome.
 - Log in yourself (the agent should not handle passwords/2FA).
 - Click the **OpenClaw Browser Relay** icon and switch the tab to **ON**.
+- **Always start a new conversation** to avoid historical messages interfering with extraction:
+  - Click the top-left **新对话** button.
 
 ### Step 2) Ask Doubao
 
@@ -66,11 +68,45 @@ Example (Douyin link analysis):
 
 > 请分析这个抖音视频为什么点赞高（从选题、情绪价值、叙事、画面、音乐、文案、受众、互动引导角度）。链接：<DOUYIN_LINK>
 
-### Step 3) Extract the full answer
+### Step 3) Extract the full answer (DOM-first; no OCR)
 
-- Wait for Doubao to finish responding.
-- Use `PageDown` / scroll to ensure the full reply is loaded.
-- Capture the entire reply text (verbatim).
+Goal: extract Doubao’s reply **from the web page itself**, reliably.
+
+1) **Scroll to the bottom** (this matters with virtualized chat lists):
+   - Press `End` (preferred), or use `PageDown` until you’re at the bottom.
+
+2) **Read the page text via in-page JS** (preferred):
+   - Evaluate `document.body.innerText` and extract the last reply.
+   - If you used the `<<BEGIN>>` / `<<END>>` wrapper, extract **between** them.
+
+Reference JS (run via Browser Relay evaluate):
+
+```js
+() => {
+  const raw = document.body?.innerText || "";
+  const begin = "<<BEGIN>>";
+  const end = "<<END>>";
+
+  const i = raw.lastIndexOf(begin);
+  const j = raw.lastIndexOf(end);
+
+  // Happy path: last wrapped block
+  if (i !== -1 && j !== -1 && j > i) {
+    return raw.slice(i, j + end.length).trim();
+  }
+
+  // Fallback: return tail text so the caller can inspect
+  const lines = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  return lines.slice(-120).join("\n");
+}
+```
+
+3) **Only if BEGIN/END is missing**:
+   - Re-ask Doubao using the wrapper format, then repeat Step 3.
+
+Notes:
+- This approach avoids relying on accessibility-tree snapshots (which can miss content) and avoids OCR entirely.
+- If the page is not at the bottom, `innerText` may not include the latest message due to virtualization.
 
 ## Guardrails
 
