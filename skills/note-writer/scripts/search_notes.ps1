@@ -37,7 +37,7 @@ $hits = @()
 foreach ($root in $roots) {
   if (!(Test-Path $root)) { continue }
 
-  $args = @('--no-heading','--with-filename','--line-number','--color','never','-S','--text', $keywordRegex, $root)
+    $args = @('--no-heading','--with-filename','--line-number','--color','never','-S','--text', $keywordRegex, $root)
   $out = & $rgExe @args 2>$null
   foreach ($line in $out) {
     if ($line -match '^(?<path>.+?):(?<line>\d+):(?<snippet>.*)$') {
@@ -90,17 +90,68 @@ $results = $hits |
 # Normalize output encoding quirks (some shells show UTF-8 as mojibake)
 function Normalize-Text([string]$s) {
   if (-not $s) { return $s }
+  return $s
+}
+
+function Read-NoteText([string]$path) {
   try {
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($s)
+    # Decode as UTF-8 via .NET (avoid any console/codepage involvement).
+    $bytes = [System.IO.File]::ReadAllBytes($path)
     return [System.Text.Encoding]::UTF8.GetString($bytes)
   } catch {
-    return $s
+    return $null
   }
 }
 
-foreach ($r in $results) {
-  $r.Path = Normalize-Text $r.Path
-  $r.Snippet = Normalize-Text $r.Snippet
+function Get-NoteMeta([string]$path) {
+  $text = Read-NoteText $path
+  if (-not $text) { return $null }
+
+  # Only inspect the first ~30 lines for speed.
+  $lines = [System.Text.RegularExpressions.Regex]::Split($text, "\r?\n") | Select-Object -First 30
+
+  $title = $null
+  $kw = $null
+  foreach ($ln in $lines) {
+    if (-not $title -and $ln -match '^#\s+(.+)$') { $title = $Matches[1].Trim(); continue }
+    if (-not $kw -and $ln -match '^关键词：\s*(.+)$') { $kw = $Matches[1].Trim(); continue }
+  }
+
+  $excerpt = $null
+  foreach ($ln in $lines) {
+    $t = $ln.Trim()
+    if (-not $t) { continue }
+    if ($t -match '^#') { continue }
+    if ($t -match '^关键词：') { continue }
+    $excerpt = $t
+    break
+  }
+
+  return [pscustomobject]@{ Title=$title; Keywords=$kw; Excerpt=$excerpt }
 }
 
-$results | ConvertTo-Json -Depth 3
+# Attach richer metadata + stable index
+$idx = 0
+$enriched = foreach ($r in $results) {
+  $idx += 1
+  $meta = Get-NoteMeta $r.Path
+
+  $matchSnippet = $r.Snippet
+  if ($matchSnippet -match '^(?<a>.*?)(?<b>[A-Za-z]:\\\\.*)$') {
+    # Trim accidental extra rg output that got concatenated into the snippet.
+    $matchSnippet = $Matches['a'].TrimEnd()
+  }
+
+  [pscustomobject]@{
+    Index = $idx
+    Path = $r.Path
+    Score = $r.Score
+    MatchLine = $r.Line
+    MatchSnippet = $matchSnippet
+    Title = if ($meta) { $meta.Title } else { $null }
+    Keywords = if ($meta) { $meta.Keywords } else { $null }
+    Excerpt = if ($meta) { $meta.Excerpt } else { $null }
+  }
+}
+
+$enriched | ConvertTo-Json -Depth 4

@@ -23,55 +23,71 @@ def slugify(title: str) -> str:
 def pick_tags(text: str, note_type: str) -> list[str]:
     text = text.strip()
 
-    base = []
+    tags: list[str] = []
     if note_type == "copywriting":
-        base.append("#文案")
+        tags.append("#文案")
     elif note_type == "daily":
-        base.append("#日记")
+        tags.append("#日记")
     else:
-        base.append("#笔记")
+        tags.append("#笔记")
 
-    # Heuristics: pull a few meaningful tokens
     candidates: list[str] = []
 
-    # Common domain hints
-    if re.search(r"Obsidian|黑曜石", text, re.I):
-        candidates += ["#Obsidian", "#笔记"]
-    if re.search(r"winget|安装", text, re.I):
-        candidates += ["#安装", "#Windows"]
-    if re.search(r"赚钱|价值|需求|迭代|模型|杠杆", text):
-        candidates += ["#赚钱", "#价值", "#需求", "#迭代", "#模型", "#杠杆"]
-    if re.search(r"日记|记录|复盘", text):
-        candidates += ["#记录", "#复盘"]
-    if re.search(r"学习|专注", text):
-        candidates += ["#学习", "#专注"]
+    domain_rules: list[tuple[str, list[str]]] = [
+        (r"Obsidian|黑曜石", ["#Obsidian", "#笔记系统"]),
+        (r"winget|安装|卸载|部署", ["#安装", "#Windows"]),
+        (r"验证码|打码|captcha|turnstile|hcaptcha|recaptcha", ["#验证码", "#自动化"]),
+        (r"Playwright", ["#Playwright"]),
+        (r"Tavily", ["#Tavily"]),
+        (r"OhMyCaptcha", ["#OhMyCaptcha"]),
+        (r"模型", ["#模型"]),
+        (r"日记|记录|复盘", ["#记录", "#复盘"]),
+        (r"学习|专注", ["#学习", "#专注"]),
+    ]
 
-    # Extract short Chinese phrases as topics
-    phrases = re.findall(r"[\u4e00-\u9fff]{2,6}", text)
-    for ph in phrases[:30]:
-        if ph in {"今天", "所以", "就是", "我们", "你们", "这个", "那个", "因为", "不是", "可以", "需要"}:
+    for pattern, rule_tags in domain_rules:
+        if re.search(pattern, text, re.I):
+            candidates.extend(rule_tags)
+
+    stop_phrases = {
+        "今天", "所以", "就是", "我们", "你们", "这个", "那个", "因为", "不是", "可以", "需要",
+        "项目", "相关", "一个", "两个", "一些", "进行", "使用", "支持", "通过", "功能", "内容",
+        "判断", "说明", "适合", "场景", "成本", "方案", "服务", "平台", "能力", "流程",
+    }
+
+    english_terms = re.findall(r"[A-Za-z][A-Za-z0-9\-]{2,30}", text)
+    for term in english_terms[:20]:
+        lowered = term.lower()
+        if lowered in {"linux", "github", "windows", "markdown"}:
+            continue
+        candidates.append("#" + term)
+
+    phrases = re.findall(r"[\u4e00-\u9fff]{2,8}", text)
+    for ph in phrases[:50]:
+        if ph in stop_phrases:
+            continue
+        if ph.startswith("我的") or ph.endswith("一个") or ph.endswith("两个"):
             continue
         candidates.append("#" + ph)
 
-    # Deduplicate while preserving order
     seen = set()
-    for t in base + candidates:
+    final_tags: list[str] = []
+    for t in tags + candidates:
         if not t.startswith("#"):
             t = "#" + t
         if t in seen:
             continue
-        seen.add(t)
-        if t in {"#今天", "#感觉", "#一些"}:
+        if t in {"#今天", "#感觉", "#一些", "#一个", "#两个"}:
             continue
-        base.append(t)
-        if len(base) >= 7:
+        seen.add(t)
+        final_tags.append(t)
+        if len(final_tags) >= 7:
             break
 
-    # Pad if needed
-    while len(base) < 7:
-        base.append(f"#tag{len(base)+1}")
+    while len(final_tags) < 7:
+        final_tags.append(f"#tag{len(final_tags)+1}")
 
-    return base[:7]
+    return final_tags[:7]
 
 
 def build_content(title: str, body: str, tags: list[str]) -> str:

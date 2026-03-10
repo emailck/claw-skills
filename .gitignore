@@ -1,0 +1,29 @@
+# OpenClaw local state
+.openclaw/
+.clawhub/lock.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Temporary files and probes
+_tmp_*
+tmp_*
+*.log
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Downloaded / external repos
+temp/
+
+# Local package artifacts
+*.tgz
+
+# Skill temp outputs
+skills/*/tmp/
+
+# Generated content drafts
+xhs_content_*.txt
+xhs_title_*.txt
