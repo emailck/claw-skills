@@ -10,7 +10,7 @@
 
 ```powershell
 $env:MIMO_API_KEY="<key>"
-python skills/feishu-mimo-voice/send_mimo_feishu_voice.py --text "爸爸，这是测试语音。" --receive-id ou_5de4807445c5776ac4caf91f982470dd --receive-id-type open_id
+python skills/feishu-mimo-voice/send_mimo_feishu_voice.py --text "爸爸，这是测试语音。" --receive-id <当前用户open_id> --receive-id-type open_id
 ```
 
 ## 适合直接触发的用户表达
